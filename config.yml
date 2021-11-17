@@ -16,31 +16,43 @@ templates:
               #parse_mode: html
               recipients:
                 - username: "{? telegram.user ?}"
-
-schedules:
-  - tasks: [my_tv_series, yts_movies]
-    schedule:
-      minute: 45
-      hour: 7,11,15,19,23
+  template_imdb:
+    imdb:
+     min_score: 7
+     min_votes: 5000
+     min_year: 2018
+     reject_genres:
+       - horror
+  movie_quality:
+    quality: 
+      - 1080p
+    content_size:
+      min: 1000
+  serie_quality:
+    quality: 
+      - 1080p
+    content_size:
+      min: 500
 
 
 tasks:
   my_tv_series:
+    template: 
+      - torrent_server
+      - template_imdb
+      - serie_quality
     rss: http://showrss.info/user/68577.rss?magnets=true&namespaces=true&name=null&quality=null&re=null
-    quality:
-      - 1080p
-    content_size:
-      min: 1000
     series:
       - Foundation
   yts_movies:
+    template: 
+      - torrent_server
+      - template_imdb
+      - movie_quality
     rss: https://yts.mx/rss/
-    quality:
-      - 1080p
-    content_size:
-      min: 1200
-    imdb:
-     min_score: 7
-     min_votes: 5000
-     reject_genres:
-       - horror
+
+
+schedules:
+  - tasks: [my_tv_series, yts_movies]
+    interval:
+      hours: 1
