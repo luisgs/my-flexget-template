@@ -1,178 +1,46 @@
 variables: variables.yml
-
-web_server:
-  web_ui: yes
-
 templates:
-
-  global:
-    no_entries_ok: yes
-
-  anchors:
-    _transmission: &transmission
-      host: '{? transmission.host ?}'
-      port: '{? transmission.port ?}'
-
-    _filesystem: &filesystem
-      retrieve: files
-      regexp: '.*\.(mp4|mkv)$'
-
-    _trakt_list: &trakt_list
-      username: '{? trakt.username ?}'
-      account: '{? trakt.username ?}'
-      strip_dates: yes
-  
-  notify-download:
+  torrent_server:
+    transmission:
+      host: localhost
+      port: 9091
+      username: "{? transmission.usr ?}"
+      password: "{? transmission.pwd ?}"
+  avisos_tarea:
     notify:
-      entries:
-        entries:
-        message: ''
+      task:
         via:
-          - discord:
-              web_hook_url: "{? discord.webhook ?}"
-              embeds:
-                - title: 'Downloading'
-                  description: >
-                    {% if series_name is defined %}{{series_name}} {{series_id|pad(2)}}
-                    {% elif tmdb_name is defined %}{{tmdb_name}} [{{tmdb_year}}]
-                    {% else %}{{title|replace('.mkv','')|replace('.mp4','')}}
-                    {% endif %}
-                  color: 0xf5d442
+          - telegram:
+              bot_token: "{? telegram.token ?}"
+              parse_mode: markdown
+              #parse_mode: html
+              recipients:
+                - username: "{? telegram.user ?}"
 
-  notify-sort:
-    notify:
-      entries:
-        message: ''
-        via:
-          - discord:
-              web_hook_url: "{? discord.webhook ?}"
-              embeds:
-                - title: 'Downloaded'
-                  description: >
-                    {% if task|re_search("anime") %}{{title|replace('.mkv','')}}
-                    {% elif task|re_search("tv") %}{{series_name}} {{series_id|pad(2)}}
-                    {% elif task|re_search("movie") %}{{tmdb_name}} [{{tmdb_year}}]
-                    {% else %}{{title|replace('.mkv','')|replace('.mp4','')}}
-                    {% endif %}
-                  color: 0x28A745
+schedules:
+  - tasks: [my_tv_series, yts_movies]
+    schedule:
+      minute: 45
+      hour: 7,11,15,19,23
+
 
 tasks:
-
-  download-anime:
-    rss:
-      url: '{? feeds.anime ?}'
-      all_entries: no
-    include: anime.yml
-    proxy:
-      url: '{? proxy.url ?}'
-    transmission:
-      <<: *transmission
-      content_filename: "{{series_name}} {{series_id|pad(2)}}"
-      path: '{? transmission.downloads ?}/anime/'
-    template: notify-download
-
-  download-tv:
-    rss:
-      url: '{? feeds.tv ?}'
-      all_entries: no
-      silent: yes
-      escape: yes
-    include: tv.yml
-    proxy:
-      url: '{? proxy.url ?}'
-    transmission:
-      <<: *transmission
-      path: '{? transmission.downloads ?}/.tv/'
-    template: notify-series
-  
-  download-movies:
-    rss:
-      url: '{? feeds.movies ?}'
-      all_entries: no
-    proxy:
-      url: '{? proxy.url ?}'
-    regexp:
-      reject_excluding:
-        - '{? regexp.filter ?}'
-      from: title
-    tmdb_lookup: yes
-    list_match:
-      from:
-        - movie_list: movies
-    transmission:
-      <<: *transmission
-      path: '{? transmission.downloads ?}/.movies/'
-    template: notify-download
-
-  update-movie-list:
-    limit:
-      amount: 10
-      from:
-        trakt_list:
-          <<: *trakt_list
-          list: '{? trakt.movies ?}'
-          type: movies
-    accept_all: yes
-    tmdb_lookup: yes
-    list_add:
-      - movie_list: movies
-    list_remove:
-      - trakt_list:
-          <<: *trakt_list
-          list: '{? trakt.movies ?}'
-          type: movies
-
-  sort-anime:
-    filesystem:
-      <<: *filesystem
-      path: '{? local.downloads ?}/anime/'
-    accept_all: yes
-    disable: builtins
-    move:
-      to: "{? local.videos ?}/Anime/{{title|re_replace(' \\d{2}','')|replace('.mkv','')}}/"
-    template: notify-sort
-  
-  sort-tv:
-    filesystem:
-      <<: *filesystem
-      path: '{? local.downloads ?}/tv/'
-    metainfo_series: yes
-    accept_all: yes
-    disable: builtins
-    move:
-      to: "{? local.videos ?}/TV/{{series_name}}/Season {{series_season}}/"
-      rename: "{{series_name|replace(':',' -')}} {{series_id|pad(2)}}{% if proper_count %} PROPER{% if proper_count > 1 %}{{proper_count}}{% endif %}{% endif %}"
-    template: notify-sort
-
-  move-movies:
-    filesystem: 
-      <<: *filesystem
-      path: '{? local.downloads ?}/.movies/'
-    accept_all: yes
-    tmdb_lookup: yes
-    disable: builtins
-    move:
-      to: "{? local.videos ?}/Movies/"
-      rename: "{{tmdb_name|replace(':',' -')}} [{{tmdb_year}}]"
-    template: notify-sort
-
-  cleanup-transmission:
-    from_transmission:
-      host: '{? transmission.host ?}'
-      port: '{? transmission.port ?}'
-      only_complete: yes
-    disable: builtins
-    accept_all: yes
-    transmission:
-      host: '{? transmission.host ?}'
-      port: '{? transmission.port ?}'
-      action: remove
-  
-schedules:
-  - tasks: [ download-anime, download-tv, sort-* ]
-    schedule:
-      minute: "*/15"
-  - tasks: [ update-movie-list, download-movies, move-movies ]
-    schedule:
-      hour: "*/6"
-      minute: 10,40
+  my_tv_series:
+    rss: http://showrss.info/user/68577.rss?magnets=true&namespaces=true&name=null&quality=null&re=null
+    quality:
+      - 1080p
+    content_size:
+      min: 1000
+    series:
+      - Foundation
+  yts_movies:
+    rss: https://yts.mx/rss/
+    quality:
+      - 1080p
+    content_size:
+      min: 1200
+    imdb:
+     min_score: 7
+     min_votes: 5000
+     reject_genres:
+       - horror
