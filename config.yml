@@ -29,12 +29,16 @@ templates:
     content_size:
       min: 1000
       strict: no
+    transmission: 
+      path: "{? transmission.downloads_movies ?}"
   serie_quality:
     quality: 
       - 1080p
     content_size:
       min: 500
       strict: no
+    transmission: 
+      path: "{? transmission.downloads_series ?}"
 
 
 tasks:
