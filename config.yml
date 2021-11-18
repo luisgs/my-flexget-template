@@ -18,7 +18,7 @@ templates:
                 - username: "{? telegram.user ?}"
   template_imdb:
     imdb:
-     min_score: 7
+     min_score: 6
      min_votes: 5000
      min_year: 2018
      reject_genres:
@@ -28,11 +28,13 @@ templates:
       - 1080p
     content_size:
       min: 1000
+      strict: no
   serie_quality:
     quality: 
       - 1080p
     content_size:
       min: 500
+      strict: no
 
 
 tasks:
